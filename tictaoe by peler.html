@@ -1,0 +1,325 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Tic Tac Toe Neon</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #000;
+      color: #0ff;
+      text-align: center;
+      margin-top: 30px;
+    }
+
+    input, select, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 5px;
+      border-radius: 5px;
+      background-color: #111;
+      color: #0ff;
+      border: 1px solid #0ff;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #0ff;
+      color: #000;
+      cursor: pointer;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-gap: 5px;
+      justify-content: center;
+      margin: 20px auto;
+      position: relative;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      font-size: 48px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #111;
+      cursor: pointer;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #0ff;
+      transition: transform 0.2s ease;
+    }
+
+    .cell:hover {
+      transform: scale(1.05);
+    }
+
+    .x {
+      color: #f00;
+      text-shadow: 0 0 8px #f00;
+    }
+
+    .o {
+      color: #00f;
+      text-shadow: 0 0 8px #00f;
+    }
+
+    .status {
+      font-size: 20px;
+      margin-top: 20px;
+      color: #fff;
+      text-shadow: 0 0 10px #0ff;
+    }
+
+    .win-line {
+      position: absolute;
+      background-color: #0f0;
+      height: 5px;
+      width: 300px;
+      transform-origin: left center;
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+      z-index: 2;
+    }
+
+    #restartBtn {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1 style="text-shadow: 0 0 10px #0ff;">Tic Tac Toe Neon</h1>
+  <div>
+    Nama: <input type="text" id="playerName" placeholder="Masukkan nama">
+    Mode: 
+    <select id="difficulty">
+      <option value="classic">Classic (2 Pemain)</option>
+      <option value="easy">Easy</option>
+      <option value="normal">Normal</option>
+      <option value="hard">Hard</option>
+    </select>
+    <button onclick="startGame()">Mulai Game</button>
+    <button id="restartBtn" onclick="restartGame()">Restart</button>
+  </div>
+
+  <div class="status" id="status">Pilih mode dan mulai permainan</div>
+  <div class="board" id="board">
+    <div id="winLine" class="win-line"></div>
+  </div>
+
+  <audio id="clickSound" src="https://www.soundjay.com/button/beep-07.wav" preload="auto"></audio>
+  <audio id="winSound" src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3" preload="auto"></audio>
+  <audio id="drawSound" src="https://www.soundjay.com/button/sounds/button-10.mp3" preload="auto"></audio>
+
+  <div style="position: fixed; bottom: 10px; width: 100%; text-align: center; color: #0ff; font-size: 14px; opacity: 0.5;">
+    © 2025 TicTacToe by peler
+  </div>
+
+
+<script>
+  // Tambahkan script untuk game di sini karena sebelumnya hilang
+  let board = Array(9).fill("");
+  let currentPlayer = "X";
+  let gameActive = false;
+  let playerName = "";
+  let aiMode = "";
+  let isAI = false;
+
+  const statusElement = document.getElementById("status");
+  const boardElement = document.getElementById("board");
+  const winLine = document.getElementById("winLine");
+  const clickSound = document.getElementById("clickSound");
+  const winSound = document.getElementById("winSound");
+  const drawSound = document.getElementById("drawSound");
+
+  const winPatterns = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  const winLineStyles = [
+    { top: '50px', left: '0', transform: 'scaleX(1)' },
+    { top: '155px', left: '0', transform: 'scaleX(1)' },
+    { top: '260px', left: '0', transform: 'scaleX(1)' },
+    { top: '0', left: '50px', transform: 'rotate(90deg) scaleX(1)' },
+    { top: '0', left: '155px', transform: 'rotate(90deg) scaleX(1)' },
+    { top: '0', left: '260px', transform: 'rotate(90deg) scaleX(1)' },
+    { top: '0', left: '0', transform: 'rotate(45deg) scaleX(1.41)' },
+    { top: '0', left: '0', transform: 'rotate(-45deg) scaleX(1.41)' }
+  ];
+
+  function startGame() {
+    board = Array(9).fill("");
+    currentPlayer = "X";
+    gameActive = true;
+    playerName = document.getElementById("playerName").value || "Player";
+    aiMode = document.getElementById("difficulty").value;
+    isAI = aiMode !== "classic";
+    statusElement.textContent = `Giliran: ${playerName} (X)`;
+    winLine.style.transform = "scaleX(0)";
+    renderBoard();
+    if (isAI && currentPlayer === "O") aiMove();
+  }
+
+  function restartGame() {
+    startGame();
+  }
+
+  function renderBoard() {
+    boardElement.innerHTML = "";
+    board.forEach((val, i) => {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      if (val === "X") cell.classList.add("x");
+      if (val === "O") cell.classList.add("o");
+      cell.textContent = val;
+      cell.onclick = () => handleClick(i);
+      boardElement.appendChild(cell);
+    });
+    boardElement.appendChild(winLine);
+  }
+
+  function handleClick(index) {
+    if (!gameActive || board[index] !== "") return;
+    if (isAI && currentPlayer === "O") return;
+
+    board[index] = currentPlayer;
+    clickSound.play();
+    renderBoard();
+
+    if (checkWinner(currentPlayer)) {
+      winSound.play();
+      endGame(`${currentPlayer === "X" ? playerName : "AI"} menang!`);
+      return;
+    } else if (isDraw()) {
+      drawSound.play();
+      endGame("Seri!");
+      return;
+    }
+
+    currentPlayer = currentPlayer === "X" ? "O" : "X";
+    statusElement.textContent = `Giliran: ${currentPlayer === "X" ? playerName : "AI"} (${currentPlayer})`;
+
+    if (isAI && currentPlayer === "O") {
+      setTimeout(aiMove, 400);
+    }
+  }
+
+  function aiMove() {
+    let index;
+    if (aiMode === "easy") {
+      const empty = board.map((v, i) => v === "" ? i : null).filter(i => i !== null);
+      index = empty[Math.floor(Math.random() * empty.length)];
+    } else if (aiMode === "normal") {
+      index = blockOrRandom();
+    } else {
+      index = minimax(board, "O").index;
+    }
+
+    board[index] = "O";
+    clickSound.play();
+    renderBoard();
+
+    if (checkWinner("O")) {
+      winSound.play();
+      endGame("AI menang!");
+    } else if (isDraw()) {
+      drawSound.play();
+      endGame("Seri!");
+    } else {
+      currentPlayer = "X";
+      statusElement.textContent = `Giliran: ${playerName} (X)`;
+    }
+  }
+
+  function blockOrRandom() {
+    for (let pattern of winPatterns) {
+      let [a, b, c] = pattern;
+      if (board[a] === "X" && board[b] === "X" && board[c] === "") return c;
+      if (board[a] === "X" && board[c] === "X" && board[b] === "") return b;
+      if (board[b] === "X" && board[c] === "X" && board[a] === "") return a;
+    }
+    const empty = board.map((v, i) => v === "" ? i : null).filter(i => i !== null);
+    return empty[Math.floor(Math.random() * empty.length)];
+  }
+
+  function minimax(newBoard, player) {
+    const availSpots = newBoard.map((v, i) => v === "" ? i : null).filter(i => i !== null);
+    if (checkWin(newBoard, "X")) return { score: -10 };
+    if (checkWin(newBoard, "O")) return { score: 10 };
+    if (availSpots.length === 0) return { score: 0 };
+
+    let moves = [];
+
+    for (let i of availSpots) {
+      let move = {};
+      move.index = i;
+      newBoard[i] = player;
+
+      if (player === "O") {
+        move.score = minimax(newBoard, "X").score;
+      } else {
+        move.score = minimax(newBoard, "O").score;
+      }
+
+      newBoard[i] = "";
+      moves.push(move);
+    }
+
+    let bestMove;
+    if (player === "O") {
+      let bestScore = -Infinity;
+      for (let i in moves) {
+        if (moves[i].score > bestScore) {
+          bestScore = moves[i].score;
+          bestMove = i;
+        }
+      }
+    } else {
+      let bestScore = Infinity;
+      for (let i in moves) {
+        if (moves[i].score < bestScore) {
+          bestScore = moves[i].score;
+          bestMove = i;
+        }
+      }
+    }
+
+    return moves[bestMove];
+  }
+
+  function checkWin(brd, pl) {
+    return winPatterns.some(p => p.every(i => brd[i] === pl));
+  }
+
+  function checkWinner(player) {
+    const index = winPatterns.findIndex(p => p.every(i => board[i] === player));
+    if (index !== -1) {
+      showWinLine(index);
+      return true;
+    }
+    return false;
+  }
+
+  function showWinLine(index) {
+    const style = winLineStyles[index];
+    winLine.style.top = style.top;
+    winLine.style.left = style.left;
+    winLine.style.transform = style.transform;
+  }
+
+  function isDraw() {
+    return board.every(v => v !== "");
+  }
+
+  function endGame(message) {
+    statusElement.textContent = message;
+    gameActive = false;
+  }
+</script>
+</body>
+</html>
